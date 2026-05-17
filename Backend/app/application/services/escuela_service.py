@@ -17,7 +17,7 @@ class EscuelaService:
             nivel_academico=nivel_academico,
             telefono=telefono
         )
-        self.repository.agregar(escuela=escuela)
+        return self.repository.agregar(escuela=escuela)
     
     def ver_escuela(self,id_escuela:int):
         return self.repository.ver_por_id(id_escuela=id_escuela)

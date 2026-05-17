@@ -12,6 +12,7 @@ class SupabaseEscuelaRepository(EscuelaRepository):
         resultado = cursor.fetchone()
         cursor.close()
         return resultado[0]
+    
     def ver_por_id(self, id_escuela):
         cursor=conn.cursor()
         cursor.execute("SELECT * FROM ver_escuela_por_id(%s)", (id_escuela,))
