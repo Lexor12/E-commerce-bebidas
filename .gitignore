@@ -1,4 +1,10 @@
-# Entorno
-.env
+# Entorno virtual
+venv/
 
-# Sistema
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Variables de entorno
+.env

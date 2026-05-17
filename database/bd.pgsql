@@ -91,6 +91,17 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Ver todas las escuelas
+CREATE OR REPLACE FUNCTION ver_escuelas()
+RETURNS TABLE(id_escuela INT,nombre TEXT,ubicacion TEXT,nivel_academico TEXT,telefono TEXT,estatus BOOLEAN
+) SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+    RETURN QUERY
+    SELECT e."id_escuela", e."nombre", e."ubicacion", e."nivel_academico", e."telefono", e."estatus"
+    FROM "Escuela" AS e;
+END;
+$$ LANGUAGE plpgsql;
+
 
 -- Editar escuela por ID
 CREATE OR REPLACE FUNCTION editar_escuela_por_id(p_id_escuela INT,p_nombre TEXT DEFAULT NULL,p_ubicacion TEXT DEFAULT NULL,p_nivel_academico TEXT DEFAULT NULL,p_telefono TEXT DEFAULT NULL
@@ -151,12 +162,12 @@ $$ LANGUAGE plpgsql;
 -- ============================================================
 
 -- Agregar repartidor
-CREATE OR REPLACE FUNCTION agregar_repartidor(p_nombre TEXT,p_fecha_ingreso TIMESTAMP,p_calificacion DECIMAL,p_telefono TEXT
+CREATE OR REPLACE FUNCTION agregar_repartidor(p_nombre TEXT,p_calificacion DECIMAL,p_telefono TEXT
 ) RETURNS INT SECURITY DEFINER SET search_path = public AS $$
 DECLARE v_id INT;
 BEGIN
     INSERT INTO "Repartidor"(nombre, fecha_ingreso, calificacion, telefono, estatus)
-    VALUES (p_nombre, p_fecha_ingreso, p_calificacion, p_telefono, TRUE)
+    VALUES (p_nombre, NOW(), p_calificacion, p_telefono, TRUE)
     RETURNING id_repartidor INTO v_id;--Esto basicamente guarda la ID que se acaba de crear en la variable
     RETURN v_id;
 END;
@@ -171,6 +182,16 @@ BEGIN
     SELECT r."id_repartidor", r."nombre", r."fecha_ingreso", r."calificacion", r."telefono", r."estatus"
     FROM "Repartidor" AS r
     WHERE r."id_repartidor" = p_id_repartidor;
+END;
+$$ LANGUAGE plpgsql;
+-- Ver todos los repartidores
+CREATE OR REPLACE FUNCTION ver_repartidores()
+RETURNS TABLE(id_repartidor INT,nombre TEXT,fecha_ingreso TIMESTAMP,calificacion DECIMAL,telefono TEXT,estatus BOOLEAN) 
+SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+    RETURN QUERY
+    SELECT r."id_repartidor", r."nombre", r."fecha_ingreso", r."calificacion", r."telefono", r."estatus"
+    FROM "Repartidor" AS r;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -257,6 +278,17 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Ver todas las bebidas
+CREATE OR REPLACE FUNCTION ver_bebidas()
+RETURNS TABLE(id_bebida INT,nombre TEXT,marca TEXT,litros DECIMAL,cantidad INT,precio DECIMAL,ingredientes TEXT,advertencias TEXT,estatus BOOLEAN)
+SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+    RETURN QUERY
+    SELECT b."id_bebida", b."nombre", b."marca", b."litros", b."cantidad", b."precio", b."ingredientes", b."advertencias", b."estatus"
+    FROM "Bebida" AS b;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Editar bebida por ID
 CREATE OR REPLACE FUNCTION editar_bebida_por_id(p_id_bebida INT,p_nombre TEXT DEFAULT NULL,p_marca TEXT DEFAULT NULL,p_litros DECIMAL DEFAULT NULL,p_cantidad INT DEFAULT NULL,p_precio DECIMAL DEFAULT NULL,p_ingredientes TEXT DEFAULT NULL,p_advertencias TEXT DEFAULT NULL)
 RETURNS TEXT SECURITY DEFINER SET search_path = public AS $$
@@ -319,9 +351,11 @@ $$ LANGUAGE plpgsql;
 -- ============================================================
 
 -- Agregar pedido
-CREATE OR REPLACE FUNCTION agregar_pedido(p_id_bebida INT,p_id_escuela INT,p_id_repartidor INT,p_modo_entrega TEXT,p_total DECIMAL,p_metodo_pago TEXT,p_cantidad INT)
+CREATE OR REPLACE FUNCTION agregar_pedido(p_id_bebida INT,p_id_escuela INT,p_id_repartidor INT,p_modo_entrega TEXT,p_metodo_pago TEXT,p_cantidad INT)
 RETURNS TEXT SECURITY DEFINER SET search_path = public AS $$
 DECLARE v_id INT;
+DECLARE v_total DECIMAL;
+DECLARE v_precio_unitario DECIMAL;
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM "Bebida" WHERE id_bebida = p_id_bebida AND estatus = TRUE) THEN
         RETURN 'Error: La bebida no existe o está inactiva.';
@@ -333,8 +367,11 @@ BEGIN
         RETURN 'Error: El repartidor no existe o está inactivo.';
     END IF;
 
-    INSERT INTO "Pedido"(id_bebida, id_escuela, id_repartidor, fecha_hora, modo_entrega, total, metodo_pago, cantidad)
-    VALUES (p_id_bebida, p_id_escuela, p_id_repartidor, NOW(), p_modo_entrega, p_total, p_metodo_pago, p_cantidad)
+    SELECT precio INTO v_precio_unitario FROM "Bebida" AS b WHERE b.id_bebida = p_id_bebida;
+    v_total := v_precio_unitario * p_cantidad;
+
+    INSERT INTO "Pedido"(id_bebida, id_escuela, id_repartidor, fecha_hora, modo_entrega, total, precio_unitario, metodo_pago, cantidad)
+    VALUES (p_id_bebida, p_id_escuela, p_id_repartidor, NOW(), p_modo_entrega, v_total, v_precio_unitario, p_metodo_pago, p_cantidad)
     RETURNING id_pedido INTO v_id;
 
     RETURN 'Pedido #' || v_id || ' registrado correctamente.';--Aqui si combiene poner text, ya que hay varios errores
@@ -361,12 +398,41 @@ RETURNS TABLE(
 BEGIN
     RETURN QUERY
     SELECT
-        pe."id_pedido", pe."fecha_hora", pe."modo_entrega", pe."total", pe."metodo_pago", pe."cantidad",b."nombre",  b."marca",  b."precio",e."nombre",e."id_escuela",r."nombre",r."id_repartidor"
+        pe."id_pedido", pe."fecha_hora", pe."modo_entrega", pe."total", pe."metodo_pago", pe."cantidad",b."nombre",  b."marca",  pe."precio_unitario",e."nombre",e."id_escuela",r."nombre",r."id_repartidor"
     FROM  "Pedido" AS pe
     JOIN  "Bebida" AS b ON b."id_bebida"= pe."id_bebida"
     JOIN  "Escuela" AS e ON e."id_escuela"    = pe."id_escuela"
     JOIN  "Repartidor" AS r ON r."id_repartidor" = pe."id_repartidor"
     WHERE pe."id_pedido" = p_id_pedido;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Ver todos los pedidos
+
+CREATE OR REPLACE FUNCTION ver_pedidos()
+RETURNS TABLE(
+    id_pedido INT,
+    fecha_hora TIMESTAMP,
+    modo_entrega TEXT,
+    total DECIMAL,
+    metodo_pago TEXT,
+    cantidad INT,
+    nombre_bebida TEXT,
+    marca_bebida TEXT,
+    precio_bebida DECIMAL,
+    nombre_escuela TEXT,
+    id_escuela INT,
+    nombre_repartidor TEXT,
+    id_repartidor INT
+) SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        pe."id_pedido", pe."fecha_hora", pe."modo_entrega", pe."total", pe."metodo_pago", pe."cantidad",b."nombre",  b."marca",  pe."precio_unitario",e."nombre",e."id_escuela",r."nombre",r."id_repartidor"
+    FROM  "Pedido" AS pe
+    JOIN  "Bebida" AS b ON b."id_bebida"= pe."id_bebida"
+    JOIN  "Escuela" AS e ON e."id_escuela"    = pe."id_escuela"
+    JOIN  "Repartidor" AS r ON r."id_repartidor" = pe."id_repartidor";
 END;
 $$ LANGUAGE plpgsql;
 
@@ -386,7 +452,7 @@ GRANT EXECUTE ON FUNCTION desactivar_escuela_por_id(INT) TO backcommerce;
 GRANT EXECUTE ON FUNCTION activar_escuela_por_id(INT) TO backcommerce;
 
 -- CATEGORÍA: REPARTIDORES
-GRANT EXECUTE ON FUNCTION agregar_repartidor(TEXT, TIMESTAMP, DECIMAL, TEXT) TO backcommerce;
+GRANT EXECUTE ON FUNCTION agregar_repartidor(TEXT, DECIMAL, TEXT) TO backcommerce;
 GRANT EXECUTE ON FUNCTION ver_repartidor_por_id(INT) TO backcommerce;
 GRANT EXECUTE ON FUNCTION editar_repartidor_por_id(INT, TEXT, DECIMAL, TEXT) TO backcommerce;
 GRANT EXECUTE ON FUNCTION desactivar_repartidor_por_id(INT) TO backcommerce;
@@ -400,8 +466,13 @@ GRANT EXECUTE ON FUNCTION desactivar_bebida_por_id(INT) TO backcommerce;
 GRANT EXECUTE ON FUNCTION activar_bebida_por_id(INT) TO backcommerce;
 
 -- CATEGORÍA: PEDIDOS
-GRANT EXECUTE ON FUNCTION agregar_pedido(INT, INT, INT, TEXT, DECIMAL, TEXT, INT) TO backcommerce;
+GRANT EXECUTE ON FUNCTION agregar_pedido(INT, INT, INT, TEXT, TEXT, INT) TO backcommerce;
 GRANT EXECUTE ON FUNCTION ver_pedido_por_id(INT) TO backcommerce;
+
+GRANT EXECUTE ON FUNCTION ver_bebidas() TO backcommerce;
+GRANT EXECUTE ON FUNCTION ver_escuelas() TO backcommerce;
+GRANT EXECUTE ON FUNCTION ver_repartidores() TO backcommerce;
+GRANT EXECUTE ON FUNCTION ver_pedidos() TO backcommerce;
 
 CREATE ROLE backcommerce WITH 
   LOGIN 
@@ -411,4 +482,7 @@ CREATE ROLE backcommerce WITH
   INHERIT 
   NOREPLICATION
   CONNECTION LIMIT 50 
-  PASSWORD '';
+  PASSWORD ''; -- Aqui va la contraseña del usuario
+
+-- NOTA
+-- Asegurarse de que todas las tablas tienen RLS dentro de supabase
