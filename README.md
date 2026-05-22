@@ -62,7 +62,7 @@ Pedido → registro inmutable de pedidos
 
 ### 3. Obtener la cadena de conexión
 
-En Supabase Dashboard → **Connect** → **Transaction pooler**, copia la URL y reemplaza el usuario por `backcommerce` y su contraseña:
+En Supabase Dashboard → **Connect** → **Direct** → **Transaction pooler**, copia la URL y reemplaza el usuario por `backcommerce` y su contraseña:
 
 asi se deberia de ver la sentencia de conexión
 
