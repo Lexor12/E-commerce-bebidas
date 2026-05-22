@@ -1,6 +1,6 @@
 # 🥤 E-commerce Bebidas
 
-API REST para gestión de pedidos de bebidas hacia escuelas, construida con **FastAPI** y **Python** siguiendo una **arquitectura hexagonal**. La base de datos vive en **Supabase (PostgreSQL)** y toda la lógica de acceso a datos se maneja a través de funciones SQL propias.
+API REST para gestión de pedidos de bebidas hacia escuelas, construida con **FastAPI** y **Python** siguiendo una **arquitectura hexagonal**. La base de datos vive en **Supabase (PostgreSQL)** y toda la lógica de acceso a datos se maneja a través de sentencias SQL usando SQLAlchemy.
 
 ---
 
@@ -29,20 +29,9 @@ API REST para gestión de pedidos de bebidas hacia escuelas, construida con **Fa
 
 ## 🗄️ Configuración de la base de datos
 
-### 1. Crear las tablas
+### 1. Crear un usuario con permisos
 
-En el **SQL Editor** de tu proyecto en Supabase, ejecuta el archivo `database/bd.pgsql`. Esto creará las tablas:
-
-```
-Bebida → catálogo de bebidas
-Escuela → escuelas registradas
-Repartidor → repartidores activos
-Pedido → registro inmutable de pedidos
-```
-
-### 2. Crear un usuario con permisos
-
-El proyecto usa un usuario dedicado `backcommerce` con permisos únicamente sobre las funciones necesarias. El script `bd.pgsql` ya incluye al final todos los `GRANT` necesarios. Solo necesitas crear el rol en Supabase:
+El proyecto usa un usuario dedicado `backcommerce` con permisos sobre las tablas. En el archivo `bd.pgsql` se menciona la sentencia adecuada para crear un usuario. Solo necesitas dar los permisos necesarios sobre las tablas al rol en Supabase en caso de usar RLS, o otro medio de seguridad:
 
 ```sql
 CREATE ROLE backcommerce WITH
@@ -56,15 +45,32 @@ CREATE ROLE backcommerce WITH
   PASSWORD 'tu_password_aqui';
 ```
 
-> ⚠️ El usuario `backcommerce` solo tiene permisos de ejecución sobre las funciones definidas. No tiene acceso directo a las tablas.
+> ⚠️ El usuario `backcommerce` debe tener permisos de CRUD sobre cada una de las tablas.
+
+### 2. Crear las tablas
+
+En el **SQL Editor** de tu proyecto en Supabase, ejecuta el archivo `database/bd.pgsql`. Esto creará las tablas:
+ - Si utilizas RLS, asegurate de proporcionar todos los permisos necesarios en la base de datos sobre el usuario creado para permitir hacer modificaciones directas.
+
+
+```
+Bebida → catálogo de bebidas
+Escuela → escuelas registradas
+Repartidor → repartidores activos
+Pedido → registro inmutable de pedidos
+```
 
 ### 3. Obtener la cadena de conexión
 
-En Supabase Dashboard → **Connect** → **Direct connection**, copia la URL y reemplaza el usuario por `backcommerce`:
+En Supabase Dashboard → **Connect** → **Transaction pooler**, copia la URL y reemplaza el usuario por `backcommerce` y su contraseña:
+
+asi se deberia de ver la sentencia de conexión
 
 ```
-postgresql://backcommerce.xxxxxx:PASSWORD@db.xxxxxx.supabase.co:5432/postgres?sslmode=require
+postgresql://backcommerce.xxxxxx:PASSWORD@db.xxxxxx.pooler.supabase.co:5432/postgres?sslmode=require
 ```
+
+debes guardarla en un archivo .env, dentro de app posteriormente, por lo que es crucial no perder la sentencia de conexión.
 
 ---
 
@@ -103,7 +109,7 @@ pip install -r requirements.txt
 Crea un archivo `.env` en la raíz de `Backend/` con el siguiente contenido:
 
 ```env
-DATABASE_URL=postgresql://backcommerce.xxxxxx:PASSWORD@db.xxxxxx.supabase.co:5432/postgres?sslmode=require
+DATABASE_URL=postgresql://backcommerce.xxxxxx:PASSWORD@db.xxxxxx.pooler.supabase.co:5432/postgres?sslmode=require
 ```
 
 > ⚠️ Nunca subas el archivo `.env` a GitHub. Ya está incluido en el `.gitignore`.
@@ -172,15 +178,15 @@ FastAPI genera automáticamente una interfaz visual donde puedes probar todos lo
 app/
 ├── domain/
 │   ├── models/          → Dataclasses puras (Escuela, Bebida, Repartidor, Pedido)
-│   └── ports/           → Interfaces abstractas (ABC) — el contrato
+│   └── ports/           → Interfaces abstractas (ABC) — los contratos
 │
 ├── application/
-│   └── services/        → Lógica de negocio — no sabe nada de Supabase
+│   └── services/        → Lógica de negocio y Casos de Uso — no sabe nada de Supabase
 │
 ├── infrastructure/
 │   └── db/supabase/
 │       ├── client.py    → Conexión SQLAlchemy a Supabase
-│       └── *_supabase.py → Implementaciones concretas que llaman funciones SQL
+│       └── *_supabase.py → Implementaciones concretas que utilizan SQLAlchemy para hacer sentencias puras.
 │
 ├── adapters/
 │   └── api/
@@ -199,7 +205,7 @@ Router → Service → Port (ABC)
                        ↓
               SupabaseRepository
                        ↓ SQLAlchemy
-              Función PostgreSQL
+                   PostgreSQL (Supabase)
                        ↓
               Response JSON ← FastAPI serializa
 ```
@@ -212,23 +218,6 @@ Router → Service → Port (ABC)
 
 ---
 
-## 🔌 Conexión a Supabase
-
-```python
-# infrastructure/db/supabase/client.py
-import os
-from sqlalchemy import create_engine
-from sqlalchemy.pool import NullPool
-from dotenv import load_dotenv
-
-load_dotenv()
-
-engine = create_engine(os.environ["DATABASE_URL"], poolclass=NullPool)
-```
-
-`NullPool` — desactiva el pool de conexiones de SQLAlchemy. Recomendado para Supabase en modo serverless para evitar conexiones colgadas.
-
----
 
 ## 📦 Dependencias
 
@@ -237,3 +226,5 @@ pip install -r requirements.txt
 ```
 
 El archivo `requirements.txt` contiene todas las versiones exactas usadas en el proyecto. No necesitas instalar nada más.
+
+> Realizado por: Lexor_12
