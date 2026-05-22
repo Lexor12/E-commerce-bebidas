@@ -1,71 +1,88 @@
 from typing import Optional
 from app.domain.models.pedido import Pedido
 from app.domain.ports.pedido_repository import PedidoRepository
-from app.infrastructure.db.supabase.client import conn
+from app.infrastructure.db.supabase.client import engine
+from sqlalchemy import Table, Column, Integer,Numeric, Boolean,String, DateTime,MetaData,ForeignKey
 
+metadata=MetaData()
+
+tabla_pedido = Table(
+    "Pedido",
+    metadata,
+    Column("id_pedido", Integer, primary_key=True, autoincrement=True),
+    Column("id_bebida", Integer, ForeignKey("Bebida.id_bebida")),
+    Column("id_escuela", Integer, ForeignKey("Escuela.id_escuela")),
+    Column("id_repartidor", Integer, ForeignKey("Repartidor.id_repartidor")),
+    Column("fecha_hora", DateTime),
+    Column("modo_entrega", String),
+    Column("total", Numeric),
+    Column("precio_unitario", Numeric),
+    Column("metodo_pago", String),
+    Column("cantidad", Integer)
+)
+
+metadata.create_all(engine)
 class SupabasePedidoRepository(PedidoRepository):
 
-    def agregar(self, pedido: Pedido) -> str:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM agregar_pedido(%s, %s, %s, %s, %s, %s)", (
-            pedido.id_bebida,
-            pedido.id_escuela,
-            pedido.id_repartidor,
-            pedido.modo_entrega,
-            pedido.metodo_pago,
-            pedido.cantidad
-        ))
-        resultado = cursor.fetchone()
-        cursor.close()
-        return resultado[0]
+    def agregar(self, pedido: Pedido) -> dict:
+        with engine.connect() as conn:
+            sentencia = tabla_pedido.insert().values(
+                id_bebida=pedido.id_bebida,
+                id_escuela=pedido.id_escuela,
+                id_repartidor=pedido.id_repartidor,
+                fecha_hora=pedido.fecha_hora,       # Se guarda lo que calculó el servicio
+                modo_entrega=pedido.modo_entrega,
+                total=pedido.total,                 # Se guarda lo que calculó el servicio
+                precio_unitario=pedido.precio_unitario, # Se guarda lo que calculó el servicio
+                metodo_pago=pedido.metodo_pago,
+                cantidad=pedido.cantidad
+            )
+            resultado = conn.execute(sentencia)
+            conn.commit()
+            return {
+                "status": 1, 
+                "mensaje": f"Pedido agregado exitosamente con id {resultado.inserted_primary_key[0]}"
+            }
 
     def ver_por_id(self, id_pedido: int) -> Optional[Pedido]:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM ver_pedido_por_id(%s)", (id_pedido,))
-        resultado = cursor.fetchone()
-        cursor.close()
+        with engine.connect() as conn:
+            sentencia = tabla_pedido.select().where(tabla_pedido.c.id_pedido == id_pedido)
+            resultado = conn.execute(sentencia).fetchone()
 
         if resultado is None:
             return None
 
-        return {
-            "id_pedido":          resultado[0],
-            "fecha_hora":         resultado[1],
-            "modo_entrega":       resultado[2],
-            "total":              resultado[3],
-            "metodo_pago":        resultado[4],
-            "cantidad":           resultado[5],
-            "nombre_bebida":      resultado[6],
-            "marca_bebida":       resultado[7],
-            "precio_bebida":      resultado[8],
-            "nombre_escuela":     resultado[9],
-            "id_escuela":         resultado[10],
-            "nombre_repartidor":  resultado[11],
-            "id_repartidor":      resultado[12]
-        }
+        return Pedido(
+            id_pedido=resultado.id_pedido,
+            id_bebida=resultado.id_bebida,
+            id_escuela=resultado.id_escuela,
+            id_repartidor=resultado.id_repartidor,
+            fecha_hora=resultado.fecha_hora,
+            modo_entrega=resultado.modo_entrega,
+            total=float(resultado.total),
+            precio_unitario=float(resultado.precio_unitario),
+            metodo_pago=resultado.metodo_pago,
+            cantidad=resultado.cantidad
+        )
         
     def ver_todos(self):
-        cursor=conn.cursor()
-        cursor.execute("SELECT * FROM ver_pedidos()")
-        resultados=cursor.fetchall()
-        cursor.close()
-        
+        with engine.connect() as conn:
+            sentencia = tabla_pedido.select()
+            resultados = conn.execute(sentencia).fetchall()
+            
         lista=[]
         for resultado in resultados:
-            pedido = {
-                "id_pedido":          resultado[0],
-                "fecha_hora":         resultado[1],
-                "modo_entrega":       resultado[2],
-                "total":              resultado[3],
-                "metodo_pago":        resultado[4],
-                "cantidad":           resultado[5],
-                "nombre_bebida":      resultado[6],
-                "marca_bebida":       resultado[7],
-                "precio_bebida":      resultado[8],
-                "nombre_escuela":     resultado[9],
-                "id_escuela":         resultado[10],
-                "nombre_repartidor":  resultado[11],
-                "id_repartidor":      resultado[12]
-            }   
+            pedido = Pedido(
+                id_pedido=resultado.id_pedido,
+                id_bebida=resultado.id_bebida,
+                id_escuela=resultado.id_escuela,
+                id_repartidor=resultado.id_repartidor,
+                fecha_hora=resultado.fecha_hora,
+                modo_entrega=resultado.modo_entrega,
+                total=float(resultado.total),
+                precio_unitario=float(resultado.precio_unitario),
+                metodo_pago=resultado.metodo_pago,
+                cantidad=resultado.cantidad
+            )
             lista.append(pedido)
         return lista

@@ -1,12 +1,18 @@
 from fastapi import APIRouter
 from app.application.services.pedido_service import PedidoService
 from app.infrastructure.db.supabase.pedido_repository_supabase import SupabasePedidoRepository
+from app.infrastructure.db.supabase.bebida_repository_supabase import SupabaseBebidaRepository
+from app.infrastructure.db.supabase.escuela_repository_supabase import SupabaseEscuelaRepository
+from app.infrastructure.db.supabase.repartidor_repository_supabase import SupabaseRepartidorRepository
 from app.adapters.api.schemas import PedidoCreate
 
 router = APIRouter()
 
 repo=SupabasePedidoRepository()
-service=PedidoService(repo)
+repo_bebida=SupabaseBebidaRepository()
+repo_escuela=SupabaseEscuelaRepository()
+repo_repartidor=SupabaseRepartidorRepository()
+service=PedidoService(repo,repo_bebida,repo_escuela,repo_repartidor)
 
 @router.post("/pedido")
 def create_pedido(body:PedidoCreate):

@@ -6,7 +6,15 @@ from app.adapters.api.pedido_router import router as pedido_router
 
 app = FastAPI(title="E-commerce Bebidas",description="API para gestión de pedidos de bebidas",version="1.0.0")
 
-app.include_router(escuela_router)
-app.include_router(repartidor_router)
-app.include_router(bebida_router)
-app.include_router(pedido_router)
+# Agregamos el parámetro tags a cada router
+app.include_router(escuela_router, tags=["Escuela"])
+app.include_router(repartidor_router, tags=["Repartidor"])
+app.include_router(bebida_router, tags=["Bebida"])
+app.include_router(pedido_router, tags=["Pedido"])
+
+@app.get("/")
+def Inicio():
+        return{
+            "estatus":"Activo",
+            "mensaje":"Bienvenido!, gracias por usar la API."
+    }
