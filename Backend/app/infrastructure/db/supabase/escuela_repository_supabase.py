@@ -9,6 +9,7 @@ metadata=MetaData()
 tabla_escuela = Table(
     "Escuela", metadata,
     Column("id_escuela", Integer, primary_key=True),
+    Column("id_usuario", Integer),
     Column("nombre", String),
     Column("ubicacion", String),
     Column("nivel_academico", String),
@@ -16,12 +17,13 @@ tabla_escuela = Table(
     Column("estatus", Boolean,default=True)
 )
 
-metadata.create_all(engine)
+#metadata.create_all(engine)
 
 class SupabaseEscuelaRepository(EscuelaRepository):
     def agregar(self, escuela:Escuela) -> dict:
         with engine.connect() as conn:
             sentencia = tabla_escuela.insert().values(
+                id_usuario=escuela.id_usuario,
                 nombre=escuela.nombre,
                 ubicacion=escuela.ubicacion,
                 nivel_academico=escuela.nivel_academico,
@@ -34,6 +36,24 @@ class SupabaseEscuelaRepository(EscuelaRepository):
                 "status": 1,
                 "mensaje": f"Escuela agregada exitosamente con id {result.inserted_primary_key[0]}"
             }
+
+    def obtener_por_usuario(self, id_usuario:int) -> Escuela:
+        with engine.connect() as conn:
+            sentencia = tabla_escuela.select().where(tabla_escuela.c.id_usuario==id_usuario)
+            resultado=conn.execute(sentencia).fetchone()
+        
+        if(resultado is None):
+            return None
+        
+        return Escuela(
+            id_escuela=resultado.id_escuela,
+            id_usuario=resultado.id_usuario,
+            nombre=resultado.nombre,
+            ubicacion=resultado.ubicacion,
+            nivel_academico=resultado.nivel_academico,
+            telefono=resultado.telefono,
+            estatus=resultado.estatus
+        )
     
     def ver_por_id(self, id_escuela:int) -> Optional[Escuela]:
         with engine.connect() as conn:
@@ -45,6 +65,7 @@ class SupabaseEscuelaRepository(EscuelaRepository):
         
         return Escuela(
             id_escuela=resultado.id_escuela,
+            id_usuario=resultado.id_usuario,
             nombre=resultado.nombre,
             ubicacion=resultado.ubicacion,
             nivel_academico=resultado.nivel_academico,
@@ -60,6 +81,7 @@ class SupabaseEscuelaRepository(EscuelaRepository):
         for resultado in resultados:
             escuela = Escuela(
                 id_escuela=resultado.id_escuela,
+                id_usuario=resultado.id_usuario,
                 nombre=resultado.nombre,
                 ubicacion=resultado.ubicacion,
                 nivel_academico=resultado.nivel_academico,

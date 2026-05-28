@@ -2,6 +2,8 @@
 
 API REST para gestión de pedidos de bebidas hacia escuelas, construida con **FastAPI** y **Python** siguiendo una **arquitectura hexagonal**. La base de datos vive en **Supabase (PostgreSQL)** y toda la lógica de acceso a datos se maneja a través de sentencias SQL usando SQLAlchemy.
 
+El sistema incluye un **sistema completo de autenticación y autorización** basado en **OAuth2 + JWT + Refresh Tokens**, con control de acceso por roles.
+
 ---
 
 ## 🛠️ Tecnologías
@@ -11,12 +13,15 @@ API REST para gestión de pedidos de bebidas hacia escuelas, construida con **Fa
 | Python 3.11+ | Lenguaje principal |
 | FastAPI | Framework web / API REST |
 | Uvicorn | Servidor ASGI |
-| SQLAlchemy (Core) | Abstracción de queries SQL |
-| psycopg2 | Driver de conexión a PostgreSQL |
-| Pydantic | Validación y serialización de datos |
+| SQLAlchemy (Core) | Abstracción de queries SQL — sentencias puras sin ORM |
+| psycopg2 | Driver de conexión directa a PostgreSQL |
+| Pydantic | Validación y serialización de datos en endpoints |
 | Supabase | Base de datos PostgreSQL en la nube |
-| python-dotenv | Manejo de variables de entorno |
-
+| python-dotenv | Carga de variables de entorno desde `.env` |
+| python-jose | Generación y verificación de JSON Web Tokens (JWT) |
+| bcrypt | Hashing seguro de contraseñas con sal aleatoria — resistente a ataques de diccionario y rainbow tables |
+| python-multipart | Soporte para form data — requerido por OAuth2PasswordRequestForm |
+  
 ---
 
 ## 📋 Requisitos previos
@@ -53,12 +58,18 @@ En el **SQL Editor** de tu proyecto en Supabase, ejecuta el archivo `database/bd
  - Si utilizas RLS, asegurate de proporcionar todos los permisos necesarios en la base de datos sobre el usuario creado para permitir hacer modificaciones directas.
 
 
-```
-Bebida → catálogo de bebidas
-Escuela → escuelas registradas
-Repartidor → repartidores activos
-Pedido → registro inmutable de pedidos
-```
+| Tabla | Descripción |
+|---|---|
+| `Bebida` | Catálogo de bebidas disponibles |
+| `Escuela` | Escuelas registradas — cada una asociada a un usuario cliente |
+| `Repartidor` | Repartidores activos del sistema |
+| `Pedido` | Registro inmutable de pedidos realizados |
+| `Usuario` | Usuarios del sistema con rol (`cliente` o `admin`) — base del sistema de autenticación |
+| `RefreshToken` | Tokens de refresco por usuario — permiten renovar sesiones sin re-autenticarse y se invalidan al hacer logout |
+
+> Los pedidos son **inmutables** — una vez creados no se editan ni eliminan. Son registros históricos.
+ 
+> La tabla `Escuela` tiene un campo `id_usuario` que la asocia a un `Usuario`. Al hacer un pedido, el sistema identifica automáticamente la escuela del usuario logueado desde el token.
 
 ### 3. Obtener la cadena de conexión
 
@@ -114,13 +125,24 @@ DATABASE_URL=postgresql://backcommerce.xxxxxx:PASSWORD@db.xxxxxx.pooler.supabase
 
 > ⚠️ Nunca subas el archivo `.env` a GitHub. Ya está incluido en el `.gitignore`.
 
-### 5. Correr el servidor
+### 5. Crear el primer administrador
+ 
+Después de registrarte, ve al SQL Editor de Supabase y ejecuta:
+ 
+```sql
+UPDATE "Usuario" SET rol = 'admin' WHERE username = 'tu_usuario';
+```
+ 
+Desde ese admin puedes promover a otros usuarios usando el endpoint `PATCH /usuario/{id}/rol`.
+ 
+
+### 6. Correr el servidor
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-### 6. Abrir Swagger
+### 7. Abrir Swagger
 
 ```
 http://127.0.0.1:8000/docs
@@ -130,43 +152,99 @@ FastAPI genera automáticamente una interfaz visual donde puedes probar todos lo
 
 ---
 
+## 🔐 Sistema de autenticación — OAuth2 + JWT
+ 
+El sistema implementa **OAuth2 Password Flow** con **JWT** y **Refresh Tokens**, integrado completamente dentro de la arquitectura hexagonal.
+ 
+### Flujo completo
+ 
+```
+1. POST /registrar       → crea usuario con contraseña hasheada (bcrypt)
+2. POST /login           → devuelve access_token (JWT, 60 min) + refresh_token (7 días)
+3. Requests protegidos   → Authorization: Bearer <access_token>
+4. POST /refresh         → cuando expira el access_token, usa el refresh_token para obtener uno nuevo
+5. POST /logout          → invalida el refresh_token en BD — sesión cerrada
+6. PATCH /usuario/{id}/rol → solo admins pueden cambiar roles
+```
+ 
+### Roles del sistema
+ 
+| Rol | Acceso |
+|---|---|
+| `cliente` | Registrar escuela, hacer pedidos, ver catálogo |
+| `admin` | Todo lo anterior + gestionar bebidas, repartidores, escuelas y roles |
+ 
+### ¿Por qué dos tokens?
+ 
+| | Access Token | Refresh Token |
+|---|---|---|
+| Duración | 60 minutos | 7 días |
+| Se guarda en | Cliente | Cliente + BD |
+| Se manda en | Cada request | Solo en `/refresh` y `/logout` |
+| Se puede invalidar | No (stateless) | Sí (logout lo desactiva en BD) |
+ 
+El **Access Token** es un JWT firmado — el servidor lo verifica matemáticamente sin tocar la BD. El **Refresh Token** es un string aleatorio guardado en BD — permite invalidarlo en el logout sin necesidad de revocar el JWT.
+ 
+### Seguridad de contraseñas
+ 
+Las contraseñas se hashean con **bcrypt** antes de guardarse. bcrypt genera una **sal aleatoria** por cada hash, lo que hace imposible los ataques de diccionario y rainbow tables:
+ 
+```
+"1234" + sal_aleatoria → $2b$12$ABC...  (guardado en BD)
+```
+ 
+Al hacer login, bcrypt extrae la sal del hash guardado y la aplica al password ingresado para comparar — nunca se guarda ni se transmite la contraseña real.
+ 
+---
+
 ## 📡 Endpoints disponibles
 
-### Bebidas
-| Método | Ruta | Descripción |
-|---|---|---|
-| `POST` | `/bebida` | Agregar bebida |
-| `GET` | `/bebida` | Ver todas las bebidas |
-| `GET` | `/bebida/{id}` | Ver bebida por ID |
-| `PATCH` | `/bebida/{id}` | Editar bebida |
-| `DELETE` | `/bebida/{id}` | Desactivar bebida |
-| `PATCH` | `/bebida/{id}/activar` | Activar bebida |
+### 🔓 Auth (públicos y protegidos)
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| `POST` | `/auth/registrar` | Público | Crear cuenta de usuario |
+| `POST` | `/auth/login` | Público | Iniciar sesión — devuelve tokens |
+| `POST` | `/auth/refresh` | Público | Renovar access token |
+| `POST` | `/auth/logout` | Público | Cerrar sesión |
+| `PATCH` | `/auth/usuario/{id}/rol` | 🔒 Admin | Cambiar rol de usuario |
 
-### Escuelas
-| Método | Ruta | Descripción |
-|---|---|---|
-| `POST` | `/escuela` | Agregar escuela |
-| `GET` | `/escuela` | Ver todas las escuelas |
-| `GET` | `/escuela/{id}` | Ver escuela por ID |
-| `PATCH` | `/escuela/{id}` | Editar escuela |
-| `DELETE` | `/escuela/{id}` | Desactivar escuela |
-| `PATCH` | `/escuela/{id}/activar` | Activar escuela |
+### 🥤 Bebidas
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| `GET` | `/bebida` | Público | Ver todas las bebidas |
+| `GET` | `/bebida/{id}` | Público | Ver bebida por ID |
+| `POST` | `/bebida` | 🔒 Admin | Agregar bebida |
+| `PATCH` | `/bebida/{id}` | 🔒 Admin | Editar bebida |
+| `DELETE` | `/bebida/{id}` | 🔒 Admin | Desactivar bebida |
+| `PATCH` | `/bebida/{id}/activar` | 🔒 Admin | Activar bebida |
+ 
+### 🏫 Escuelas
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| `GET` | `/escuela` | Público | Ver todas las escuelas |
+| `GET` | `/escuela/{id}` | Público | Ver escuela por ID |
+| `POST` | `/escuela` | 🔒 Logueado | Registrar escuela propia |
+| `PATCH` | `/escuela/{id}` | 🔒 Admin | Editar escuela |
+| `DELETE` | `/escuela/{id}` | 🔒 Admin | Desactivar escuela |
+| `PATCH` | `/escuela/{id}/activar` | 🔒 Admin | Activar escuela |
+ 
+### 🚚 Repartidores
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| `GET` | `/repartidor` | Público | Ver todos los repartidores |
+| `GET` | `/repartidor/{id}` | Público | Ver repartidor por ID |
+| `POST` | `/repartidor` | 🔒 Admin | Agregar repartidor |
+| `PATCH` | `/repartidor/{id}` | 🔒 Admin | Editar repartidor |
+| `DELETE` | `/repartidor/{id}` | 🔒 Admin | Desactivar repartidor |
+| `PATCH` | `/repartidor/{id}/activar` | 🔒 Admin | Activar repartidor |
+ 
+### 📦 Pedidos
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| `POST` | `/pedido` | 🔒 Logueado | Registrar pedido — la escuela se obtiene del token |
+| `GET` | `/pedido/{id}` | 🔒 Logueado | Ver pedido por ID |
+| `GET` | `/pedido` | 🔒 Logueado | Ver todos los pedidos |
 
-### Repartidores
-| Método | Ruta | Descripción |
-|---|---|---|
-| `POST` | `/repartidor` | Agregar repartidor |
-| `GET` | `/repartidor` | Ver todos los repartidores |
-| `GET` | `/repartidor/{id}` | Ver repartidor por ID |
-| `PATCH` | `/repartidor/{id}` | Editar repartidor |
-| `DELETE` | `/repartidor/{id}` | Desactivar repartidor |
-| `PATCH` | `/repartidor/{id}/activar` | Activar repartidor |
-
-### Pedidos
-| Método | Ruta | Descripción |
-|---|---|---|
-| `POST` | `/pedido` | Registrar pedido |
-| `GET` | `/pedido/{id}` | Ver pedido por ID |
 
 > Los pedidos son **inmutables** — una vez creados no se editan ni eliminan. Son registros históricos. El `total` y `precio_unitario` se calculan automáticamente en la BD.
 
@@ -174,47 +252,78 @@ FastAPI genera automáticamente una interfaz visual donde puedes probar todos lo
 
 ## 🏗️ Arquitectura hexagonal
 
+
 ```
 app/
 ├── domain/
-│   ├── models/          → Dataclasses puras (Escuela, Bebida, Repartidor, Pedido)
-│   └── ports/           → Interfaces abstractas (ABC) — los contratos
+│   ├── models/          → Entidades puras (Bebida, Escuela, Repartidor, Pedido, User, RefreshToken)
+│   │                      Sin dependencias externas — solo Python puro
+│   └── ports/           → Contratos abstractos (ABC) que definen qué se puede hacer
+│                          sin saber cómo se implementa
 │
 ├── application/
-│   └── services/        → Lógica de negocio y Casos de Uso — no sabe nada de Supabase
+│   └── services/        → Lógica de negocio y casos de uso
+│                          No sabe nada de Supabase, JWT ni FastAPI
+│                          Solo trabaja con los contratos (ports)
 │
 ├── infrastructure/
+│   ├── auth/
+│   │   └── jwt_service.py        → Implementación concreta de JWT (python-jose)
 │   └── db/supabase/
-│       ├── client.py    → Conexión SQLAlchemy a Supabase
-│       └── *_supabase.py → Implementaciones concretas que utilizan SQLAlchemy para hacer sentencias puras.
+│       ├── client.py             → Conexión SQLAlchemy a Supabase
+│       └── *_supabase.py         → Implementaciones concretas de los repositorios
 │
 ├── adapters/
-│   └── api/
-│       ├── schemas.py   → Modelos Pydantic (validación request/response)
-│       └── *_router.py  → Endpoints FastAPI
+│   ├── api/
+│   │   ├── schemas.py            → Modelos Pydantic (validación request/response)
+│   │   └── *_router.py           → Endpoints FastAPI — solo reciben y delegan
+│   └── dependencies/
+│       ├── container.py          → Punto central de ensamblaje — inyección de dependencias
+│       └── auth_dependency.py    → get_current_user y require_rol — protección de rutas
 │
 └── main.py              → Registra todos los routers
 ```
 
-### Flujo de un request
 
+### Flujo de un request protegido
+ 
 ```
-Request JSON
-    ↓ Pydantic valida
-Router → Service → Port (ABC)
-                       ↓
-              SupabaseRepository
-                       ↓ SQLAlchemy
-                   PostgreSQL (Supabase)
-                       ↓
-              Response JSON ← FastAPI serializa
+Request + Bearer Token
+    ↓
+auth_dependency.py → verifica JWT → extrae usuario y rol
+    ↓
+Router → valida body con Pydantic
+    ↓
+Service → lógica de negocio → llama al Port (ABC)
+    ↓
+SupabaseRepository → SQLAlchemy → PostgreSQL (Supabase)
+    ↓
+Response JSON ← FastAPI serializa
+```
+ 
+### Flujo de login
+ 
+```
+POST /login { username, password }
+    ↓
+AuthService → busca usuario en BD → verifica bcrypt
+    ↓
+JWTService.create_token() → genera Access Token (JWT firmado)
+secrets.token_hex()       → genera Refresh Token (string aleatorio)
+    ↓
+RefreshToken guardado en BD
+    ↓
+{ access_token, refresh_token, token_type: "bearer" }
 ```
 
 ### Principios aplicados
 
-- **Inversión de dependencias** — los services dependen de interfaces, no de implementaciones
+- **Inversión de dependencias** — los services dependen de interfaces (ports), no de implementaciones concretas
 - **Independencia de infraestructura** — cambiar Supabase por MySQL solo requiere reescribir los `*_supabase.py`
+- **Independencia del mecanismo de auth** — cambiar JWT por otro sistema solo requiere reescribir `jwt_service.py`
 - **Soft delete** — ninguna entidad se elimina físicamente, se desactiva con `estatus = FALSE`
+- **Inyección de dependencias** — `container.py` es el único lugar donde se instancian las implementaciones concretas
+
 
 ---
 

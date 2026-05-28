@@ -22,6 +22,7 @@ CREATE TABLE "Bebida" (
 
 CREATE TABLE "Escuela" (
   "id_escuela" SERIAL,
+  "id_usuario" INT,
   "nombre" TEXT,
   "ubicacion" TEXT,
   "nivel_academico" TEXT,
@@ -61,6 +62,19 @@ CREATE TABLE "Pedido" (
   CONSTRAINT "FK_Pedido_id_repartidor"
     FOREIGN KEY ("id_repartidor")
     REFERENCES "Repartidor"("id_repartidor")
+);
+CREATE TABLE "Usuario" (
+    id_usuario SERIAL PRIMARY KEY,
+    username   VARCHAR(48) UNIQUE NOT NULL,
+    password   VARCHAR(256) NOT NULL,
+    rol        VARCHAR(20) DEFAULT 'cliente'
+);
+CREATE TABLE "RefreshToken" (
+    id_token SERIAL PRIMARY KEY,
+    token VARCHAR(256) UNIQUE NOT NULL,
+    id_usuario INTEGER NOT NULL,
+    expira TIMESTAMP NOT NULL,
+    activo BOOLEAN DEFAULT TRUE
 );
 
 CREATE ROLE backcommerce WITH 

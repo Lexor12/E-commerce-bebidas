@@ -8,6 +8,13 @@ class BebidaService:
         self.repository = repository
     def agregar_bebida(self, nombre: str, marca: str, litros: int, cantidad: int, precio: float, ingredientes: str, advertencias: str) -> dict:
         # CASO DE USO: Crear una entidad nueva en el sistema
+        if cantidad<0:
+            raise HTTPException(status_code=400, detail=f"La bebida no puede tener cantidad menor a 0.")
+        if precio<0:
+            raise HTTPException(status_code=400, detail=f"La bebida no puede tener precio menor a 0.")
+        if litros<0:
+            raise HTTPException(status_code=400, detail=f"La bebida no puede tener cantidad de litros menor a 0.")
+        
         bebida = Bebida(
             id_bebida=None,
             nombre=nombre,
@@ -31,6 +38,15 @@ class BebidaService:
 
     def editar_bebida(self, id_bebida: int, datos: BebidaUpdate) -> dict:
         datos_dict = datos.dict(exclude_unset=True)
+        if "cantidad" in datos_dict and datos_dict["cantidad"] < 0:
+            raise HTTPException(status_code=400, detail="La bebida no puede tener cantidad menor a 0.")
+
+        if "precio" in datos_dict and datos_dict["precio"] < 0:
+            raise HTTPException(status_code=400, detail="La bebida no puede tener precio menor a 0.")
+
+        if "litros" in datos_dict and datos_dict["litros"] < 0:
+            raise HTTPException(status_code=400, detail="La bebida no puede tener cantidad de litros menor a 0.")
+        
         resultado = self.repository.editar_por_id(id_bebida, datos_dict)
         if resultado["status"] == 0:
             raise HTTPException(status_code=404, detail=resultado["mensaje"])

@@ -9,11 +9,21 @@ class RepartidorService:
     def __init__(self, repository: RepartidorRepository):
         self.repository = repository
 
-    def agregar_repartidor(self, nombre: str, fecha_ingreso: datetime, calificacion: float, telefono: str) -> dict:
+    def agregar_repartidor(self, nombre: str, calificacion: float, telefono: str) -> dict:
+        
+        if len(telefono)<10:
+            raise HTTPException(status_code=400, detail=f"El repartidor debe tener un número de teléfono valido.")
+        
+        if calificacion<0:
+            raise HTTPException(status_code=400, detail=f"El repartidor debe tener una calificación valida.")
+        
+        
+        fecha_actual = datetime.now()
+        
         repartidor = Repartidor(
             id_repartidor=None,
             nombre=nombre,
-            fecha_ingreso=fecha_ingreso,
+            fecha_ingreso=fecha_actual,
             calificacion=calificacion,
             telefono=telefono
         )
@@ -30,6 +40,12 @@ class RepartidorService:
 
     def editar_repartidor(self, id_repartidor: int, datos: RepartidorUpdate) -> dict:
         datos_dict = datos.dict(exclude_unset=True)
+        if "telefono" in datos_dict and len(datos_dict["telefono"]) < 10:
+            raise HTTPException(status_code=400, detail="El repartidor debe tener un número de teléfono valido.")
+        
+        if "calificacion" in datos_dict and datos_dict["calificacion"] < 0:
+            raise HTTPException(status_code=400, detail="El repartidor debe tener una calificación valida.")
+        
         resultado= self.repository.editar_por_id(id_repartidor, datos_dict)
         if resultado["status"] == 0:
             raise HTTPException(status_code=404, detail=resultado["mensaje"])

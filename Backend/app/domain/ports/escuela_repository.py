@@ -6,6 +6,10 @@ class EscuelaRepository(ABC): #Heredamos de ABC para permitir clases abstractas
     @abstractmethod
     def agregar(self,escuela:Escuela) -> dict:
         pass
+    
+    @abstractmethod
+    def obtener_por_usuario(self, id_usuario:int) -> Optional[Escuela]:
+        pass
     @abstractmethod
     def ver_por_id(self,id_escuela:int) ->Optional[Escuela]:
         pass #Ponemos optional, ya que como puede retornar None, es vital en caso de que se busque un objeto no existente

@@ -16,7 +16,7 @@ tabla_repartidor = Table(
     Column("estatus", Boolean, default=True)
 )
 
-metadata.create_all(engine)
+#metadata.create_all(engine)
 class SupabaseRepartidorRepository(RepartidorRepository):
     def agregar(self, repartidor:Repartidor):
         with engine.connect() as conn:

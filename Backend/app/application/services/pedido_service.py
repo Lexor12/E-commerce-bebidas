@@ -13,19 +13,21 @@ class PedidoService:
         self.escuela_repository=escuela_repository
         self.repartidor_repository=repartidor_repository
         
-    def agregar_pedido(self,id_bebida: int, id_escuela: int, id_repartidor: int, modo_entrega: str, metodo_pago: str, cantidad: int) -> dict:
+    def agregar_pedido(self,id_bebida: int, id_usuario: int, id_repartidor: int, modo_entrega: str, metodo_pago: str, cantidad: int) -> dict:
         if cantidad <= 0:
             raise HTTPException(status_code=400, detail="La cantidad debe ser mayor a cero.")
+        
+        escuela = self.escuela_repository.obtener_por_usuario(id_usuario)
+        if escuela is None:
+            raise HTTPException(status_code=404, detail="No tienes una escuela asociada")
         
         bebida = self.bebida_repository.ver_por_id(id_bebida)
         if not bebida:
             raise HTTPException(status_code=404, detail="La bebida seleccionada no existe.")
-        escuela = self.escuela_repository.ver_por_id(id_escuela)
-        if not escuela:
-            raise HTTPException(status_code=404, detail="La escuela seleccionada no existe.")
+        
         repartidor = self.repartidor_repository.ver_por_id(id_repartidor)
         if not repartidor:
-            raise HTTPException(status_code=404, detail="La repartidor seleccionada no existe.")
+            raise HTTPException(status_code=404, detail="El repartidor seleccionada no existe.")
         
         if bebida.cantidad<cantidad:
             raise HTTPException(status_code=404, detail="No hay stock.")
@@ -39,7 +41,7 @@ class PedidoService:
         pedido = Pedido(
             id_pedido=None,
             id_bebida=id_bebida,
-            id_escuela=id_escuela,
+            id_escuela=escuela.id_escuela,
             id_repartidor=id_repartidor,
             fecha_hora=fecha_actual,
             modo_entrega=modo_entrega,

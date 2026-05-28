@@ -20,7 +20,7 @@ tabla_bebida=Table(
     Column("estatus", Boolean, default=True) # Mapea tu BOOLEAN
 )
 
-metadata.create_all(engine)
+#metadata.create_all(engine)
 
 class SupabaseBebidaRepository(BebidaRepository):
 

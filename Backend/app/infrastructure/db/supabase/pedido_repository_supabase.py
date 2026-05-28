@@ -21,7 +21,7 @@ tabla_pedido = Table(
     Column("cantidad", Integer)
 )
 
-metadata.create_all(engine)
+#metadata.create_all(engine)
 class SupabasePedidoRepository(PedidoRepository):
 
     def agregar(self, pedido: Pedido) -> dict:

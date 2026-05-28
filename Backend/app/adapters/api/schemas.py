@@ -18,7 +18,6 @@ class EscuelaUpdate(BaseModel):
 # Repartidor
 class RepartidorCreate(BaseModel):
     nombre:str = Field(..., example="Carlos López")
-    fecha_ingreso: datetime = Field(..., example="2024-01-15T08:00:00")
     calificacion: float= Field(..., example=4.8)
     telefono: str = Field(..., example="3387654321")
     
@@ -48,8 +47,18 @@ class BebidaUpdate(BaseModel):
 # Pedido
 class PedidoCreate(BaseModel):
     id_bebida:int=Field(...,example=1)
-    id_escuela: int= Field(...,example=1)
     id_repartidor: int= Field(...,example=1)
     modo_entrega: str= Field(...,example="domicilio")
     metodo_pago:str= Field(...,example="efectivo")
     cantidad:int= Field(...,example=2)
+    
+# Usuario
+class UsuarioCreate(BaseModel):
+    username: str
+    password: str
+    
+class UsuarioRolUpdate(BaseModel):
+    rol: str = Field(..., example="cliente")
+    
+class RefreshTokens(BaseModel):
+    refresh_token: str = Field(...)
