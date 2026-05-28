@@ -21,11 +21,11 @@ def editar_repartidor(id_repartidor:int,body:RepartidorUpdate,user=Depends(requi
     return service.editar_repartidor(id_repartidor=id_repartidor,datos=body)
 
 @router.get("/repartidor/{id_repartidor}")
-def ver_repartidor(id_repartidor:int):
+def ver_repartidor(id_repartidor:int,user=Depends(get_current_user)):
     return service.ver_repartidor(id_repartidor=id_repartidor)
 
 @router.get("/repartidor")
-def ver_repartidores():
+def ver_repartidores(user=Depends(get_current_user)):
     return service.ver_repartidores()
 
 @router.delete("/repartidor/{id_repartidor}")

@@ -2,7 +2,7 @@ from fastapi import APIRouter,Depends
 from app.application.services.bebida_service import BebidaService
 from app.infrastructure.db.supabase.bebida_repository_supabase import SupabaseBebidaRepository
 from app.adapters.api.schemas import BebidaCreate,BebidaUpdate
-from app.adapters.dependencies.auth_dependency import require_rol
+from app.adapters.dependencies.auth_dependency import require_rol,get_current_user
 
 
 router = APIRouter()
@@ -27,11 +27,11 @@ def editar_bebida(id_bebida:int,body:BebidaUpdate,user=Depends(require_rol("admi
     return service.editar_bebida(id_bebida=id_bebida,datos=body)
 
 @router.get("/bebida/{id_bebida}")
-def ver_bebida(id_bebida:int):
+def ver_bebida(id_bebida:int,user=Depends(get_current_user)):
     return service.ver_bebida(id_bebida=id_bebida)
 
 @router.get("/bebida")
-def ver_bebidas():
+def ver_bebidas(user=Depends(get_current_user)):
     return service.ver_bebidas()
 
 @router.delete("/bebida/{id_bebida}")

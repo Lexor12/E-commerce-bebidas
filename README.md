@@ -99,7 +99,7 @@ debes designar una clave para los tokens
 
 > ⚠️ Nunca subas el archivo `.env` a GitHub. Ya está incluido en el `.gitignore`.
 
-### 5. Crear el primer administrador
+### 5. Ejecutar la app (Backend)
  
 Ejecuta el proyecto, usando: 
 
@@ -188,8 +188,8 @@ Al hacer login, bcrypt extrae la sal del hash guardado y la aplica al password i
 ### 🥤 Bebidas
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| `GET` | `/bebida` | Público | Ver todas las bebidas |
-| `GET` | `/bebida/{id}` | Público | Ver bebida por ID |
+| `GET` | `/bebida` | 🔒 Logueado | Ver todas las bebidas |
+| `GET` | `/bebida/{id}` | 🔒 Logueado | Ver bebida por ID |
 | `POST` | `/bebida` | 🔒 Admin | Agregar bebida |
 | `PATCH` | `/bebida/{id}` | 🔒 Admin | Editar bebida |
 | `DELETE` | `/bebida/{id}` | 🔒 Admin | Desactivar bebida |
@@ -198,8 +198,8 @@ Al hacer login, bcrypt extrae la sal del hash guardado y la aplica al password i
 ### 🏫 Escuelas
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| `GET` | `/escuela` | Público | Ver todas las escuelas |
-| `GET` | `/escuela/{id}` | Público | Ver escuela por ID |
+| `GET` | `/escuela` | 🔒 Logueado | Ver todas las escuelas |
+| `GET` | `/escuela/{id}` | 🔒 Logueado | Ver escuela por ID |
 | `POST` | `/escuela` | 🔒 Logueado | Registrar escuela propia |
 | `PATCH` | `/escuela/{id}` | 🔒 Admin | Editar escuela |
 | `DELETE` | `/escuela/{id}` | 🔒 Admin | Desactivar escuela |
@@ -208,8 +208,8 @@ Al hacer login, bcrypt extrae la sal del hash guardado y la aplica al password i
 ### 🚚 Repartidores
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| `GET` | `/repartidor` | Público | Ver todos los repartidores |
-| `GET` | `/repartidor/{id}` | Público | Ver repartidor por ID |
+| `GET` | `/repartidor` | 🔒 Logueado | Ver todos los repartidores |
+| `GET` | `/repartidor/{id}` | 🔒 Logueado | Ver repartidor por ID |
 | `POST` | `/repartidor` | 🔒 Admin | Agregar repartidor |
 | `PATCH` | `/repartidor/{id}` | 🔒 Admin | Editar repartidor |
 | `DELETE` | `/repartidor/{id}` | 🔒 Admin | Desactivar repartidor |
@@ -222,6 +222,7 @@ Al hacer login, bcrypt extrae la sal del hash guardado y la aplica al password i
 | `GET` | `/pedido/{id}` | 🔒 Logueado | Ver pedido por ID |
 | `GET` | `/pedido` | 🔒 Logueado | Ver todos los pedidos |
 
+🔒 Logueado significa que es minimo un "cliente", es decir que un Admin puede tambien usarlo
 
 > Los pedidos son **inmutables** — una vez creados no se editan ni eliminan. Son registros históricos. El `total` y `precio_unitario` se calculan automáticamente en la BD.
 
@@ -303,7 +304,6 @@ RefreshToken guardado en BD
 
 
 ---
-
 
 ## 📦 Dependencias
 

@@ -17,11 +17,11 @@ def editar_escuela(id_escuela:int,body:EscuelaUpdate,user=Depends(require_rol("a
     return service.editar_escuela(id_escuela=id_escuela,datos=body)
 
 @router.get("/escuela/{id_escuela}")
-def ver_escuela(id_escuela:int):
+def ver_escuela(id_escuela:int,user=Depends(get_current_user)):
     return service.ver_escuela(id_escuela=id_escuela)
 
 @router.get("/escuela")
-def ver_escuelas():
+def ver_escuelas(user=Depends(get_current_user)):
     return service.ver_escuelas()
 
 @router.delete("/escuela/{id_escuela}")
