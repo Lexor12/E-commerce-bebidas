@@ -3,25 +3,9 @@ from app.domain.models.pedido import Pedido
 from app.domain.ports.pedido_repository import PedidoRepository
 from app.infrastructure.db.supabase.client import engine
 from sqlalchemy import Table, Column, Integer,Numeric, Boolean,String, DateTime,MetaData,ForeignKey
+from app.infrastructure.db.supabase.tables import tabla_pedido
 
-metadata=MetaData()
 
-tabla_pedido = Table(
-    "Pedido",
-    metadata,
-    Column("id_pedido", Integer, primary_key=True, autoincrement=True),
-    Column("id_bebida", Integer, ForeignKey("Bebida.id_bebida")),
-    Column("id_escuela", Integer, ForeignKey("Escuela.id_escuela")),
-    Column("id_repartidor", Integer, ForeignKey("Repartidor.id_repartidor")),
-    Column("fecha_hora", DateTime),
-    Column("modo_entrega", String),
-    Column("total", Numeric),
-    Column("precio_unitario", Numeric),
-    Column("metodo_pago", String),
-    Column("cantidad", Integer)
-)
-
-#metadata.create_all(engine)
 class SupabasePedidoRepository(PedidoRepository):
 
     def agregar(self, pedido: Pedido) -> dict:

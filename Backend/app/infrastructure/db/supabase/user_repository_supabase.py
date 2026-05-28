@@ -2,19 +2,7 @@ from typing import Optional
 from app.domain.models.user import User
 from app.domain.ports.user_repository import UserRepository
 from app.infrastructure.db.supabase.client import engine
-from sqlalchemy import Table, Column, Integer,Numeric, Boolean,String, MetaData
-
-metadata=MetaData()
-
-tabla_usuario = Table(
-    "Usuario", metadata,
-    Column("id_usuario", Integer, primary_key=True,autoincrement=True),
-    Column("username", String),
-    Column("password", String),
-    Column("rol", String)
-)
-
-#metadata.create_all(engine)
+from app.infrastructure.db.supabase.tables import tabla_usuario
 
 class SupabaseUserRepository(UserRepository):
     def buscar_por_username(self, username:str)-> Optional[User]:

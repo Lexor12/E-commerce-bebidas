@@ -13,7 +13,7 @@ def get_refresh_repo():  # ← NUEVO
 
 """ 
 Esto, solventa el problema de que por ejemplo, un archivo usa:
-repo = SupabaseBebidaRepository()
+repo = SupabaseBebidaRepository()   
 service = BebidaService(repo)
 
 o sea requiere definir ahi el tipo, y si imaginemonos que tenemos otros archivos

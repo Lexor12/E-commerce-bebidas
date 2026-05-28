@@ -2,21 +2,8 @@ from typing import Optional
 from app.domain.models.repartidor import Repartidor
 from app.domain.ports.repartidor_repository import RepartidorRepository
 from app.infrastructure.db.supabase.client import engine
-from sqlalchemy import Table, Column, Integer,Numeric,DateTime, Boolean,String, MetaData
+from app.infrastructure.db.supabase.tables import tabla_repartidor
 
-metadata=MetaData()
-
-tabla_repartidor = Table(
-    "Repartidor", metadata,
-    Column("id_repartidor", Integer, primary_key=True, autoincrement=True),
-    Column("nombre", String),
-    Column("fecha_ingreso", DateTime),
-    Column("calificacion", Numeric),
-    Column("telefono", String),
-    Column("estatus", Boolean, default=True)
-)
-
-#metadata.create_all(engine)
 class SupabaseRepartidorRepository(RepartidorRepository):
     def agregar(self, repartidor:Repartidor):
         with engine.connect() as conn:

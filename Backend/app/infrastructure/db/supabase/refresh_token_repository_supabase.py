@@ -5,17 +5,7 @@ from typing import Optional
 from datetime import datetime
 from sqlalchemy import Table,Column,String,Boolean,DateTime,MetaData,Integer
 import secrets
-
-metadata = MetaData()
-
-tabla_refresh_token=Table(
-    "RefreshToken",metadata,
-    Column("id_token", Integer, primary_key=True, autoincrement=True),
-    Column("token", String),
-    Column("id_usuario", Integer),
-    Column("expira", DateTime),
-    Column("activo", Boolean, default=True)
-)
+from app.infrastructure.db.supabase.tables import tabla_refresh_token
 
 class SupabaseRefreshTokenRepository(RefreshTokenRepository):
 

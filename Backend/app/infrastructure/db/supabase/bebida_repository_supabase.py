@@ -2,25 +2,7 @@ from typing import Optional
 from app.domain.models.bebida import Bebida
 from app.domain.ports.bebida_repository import BebidaRepository
 from app.infrastructure.db.supabase.client import engine
-from sqlalchemy import Table, Column, Integer,Numeric, Boolean,String, MetaData
-
-metadata= MetaData()
-
-tabla_bebida=Table(
-    "Bebida",
-    metadata,
-    Column("id_bebida",Integer,primary_key=True,autoincrement=True),
-    Column("nombre", String),
-    Column("marca", String),
-    Column("litros", Numeric),
-    Column("cantidad", Integer),
-    Column("precio", Numeric),
-    Column("ingredientes", String),
-    Column("advertencias", String),
-    Column("estatus", Boolean, default=True) # Mapea tu BOOLEAN
-)
-
-#metadata.create_all(engine)
+from app.infrastructure.db.supabase.tables import tabla_bebida
 
 class SupabaseBebidaRepository(BebidaRepository):
 

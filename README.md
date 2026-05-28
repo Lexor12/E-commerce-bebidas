@@ -34,51 +34,20 @@ El sistema incluye un **sistema completo de autenticación y autorización** bas
 
 ## 🗄️ Configuración de la base de datos
 
-### 1. Crear un usuario con permisos
+### 1. Crear una Base de datos
 
-El proyecto usa un usuario dedicado `backcommerce` con permisos sobre las tablas. En el archivo `bd.pgsql` se menciona la sentencia adecuada para crear un usuario. Solo necesitas dar los permisos necesarios sobre las tablas al rol en Supabase en caso de usar RLS, o otro medio de seguridad:
+En supabase, debes crear una nueva base de datos, asegurate de designar un nombre entendible, puede ser como "P3Bebidas", y utiliza el generador de contraseñas.
 
-```sql
-CREATE ROLE backcommerce WITH
-  LOGIN
-  NOSUPERUSER
-  NOCREATEDB
-  NOCREATEROLE
-  INHERIT
-  NOREPLICATION
-  CONNECTION LIMIT 50
-  PASSWORD 'tu_password_aqui';
-```
+> Asegurate de guardar esa contraseña en un lugar seguro ya que se usará más tarde.
 
-> ⚠️ El usuario `backcommerce` debe tener permisos de CRUD sobre cada una de las tablas.
+### 2. Obtener la cadena de conexión
 
-### 2. Crear las tablas
-
-En el **SQL Editor** de tu proyecto en Supabase, ejecuta el archivo `database/bd.pgsql`. Esto creará las tablas:
- - Si utilizas RLS, asegurate de proporcionar todos los permisos necesarios en la base de datos sobre el usuario creado para permitir hacer modificaciones directas.
-
-
-| Tabla | Descripción |
-|---|---|
-| `Bebida` | Catálogo de bebidas disponibles |
-| `Escuela` | Escuelas registradas — cada una asociada a un usuario cliente |
-| `Repartidor` | Repartidores activos del sistema |
-| `Pedido` | Registro inmutable de pedidos realizados |
-| `Usuario` | Usuarios del sistema con rol (`cliente` o `admin`) — base del sistema de autenticación |
-| `RefreshToken` | Tokens de refresco por usuario — permiten renovar sesiones sin re-autenticarse y se invalidan al hacer logout |
-
-> Los pedidos son **inmutables** — una vez creados no se editan ni eliminan. Son registros históricos.
- 
-> La tabla `Escuela` tiene un campo `id_usuario` que la asocia a un `Usuario`. Al hacer un pedido, el sistema identifica automáticamente la escuela del usuario logueado desde el token.
-
-### 3. Obtener la cadena de conexión
-
-En Supabase Dashboard → **Connect** → **Direct** → **Transaction pooler**, copia la URL y reemplaza el usuario por `backcommerce` y su contraseña:
+En Supabase Dashboard → **Connect** → **Direct** → **Transaction pooler**, copia la URL y reemplaza la contraseña con la contraseña antes generada en el paso anterior:
 
 asi se deberia de ver la sentencia de conexión
 
 ```
-postgresql://backcommerce.xxxxxx:PASSWORD@db.xxxxxx.pooler.supabase.co:5432/postgres?sslmode=require
+postgresql://postgres.xxxxxx:PASSWORD@db.xxxxxx.pooler.supabase.co:5432/postgres?sslmode=require
 ```
 
 debes guardarla en un archivo .env, dentro de app posteriormente, por lo que es crucial no perder la sentencia de conexión.
@@ -120,29 +89,25 @@ pip install -r requirements.txt
 Crea un archivo `.env` en la raíz de `Backend/` con el siguiente contenido:
 
 ```env
-DATABASE_URL=postgresql://backcommerce.xxxxxx:PASSWORD@db.xxxxxx.pooler.supabase.co:5432/postgres?sslmode=require
+DATABASE_URL=postgresql://postgres.xxxxxx:PASSWORD@db.xxxxxx.pooler.supabase.co:5432/postgres?sslmode=require
+SECRET_KEY=tu_clave_secreta_para_tokens
+ALGORITHM="HS256"
+EXPIRE_MINUTES=60
 ```
+
+debes designar una clave para los tokens
 
 > ⚠️ Nunca subas el archivo `.env` a GitHub. Ya está incluido en el `.gitignore`.
 
 ### 5. Crear el primer administrador
  
-Después de registrarte, ve al SQL Editor de Supabase y ejecuta:
- 
-```sql
-UPDATE "Usuario" SET rol = 'admin' WHERE username = 'tu_usuario';
-```
- 
-Desde ese admin puedes promover a otros usuarios usando el endpoint `PATCH /usuario/{id}/rol`.
- 
-
-### 6. Correr el servidor
+Ejecuta el proyecto, usando: 
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-### 7. Abrir Swagger
+### 6. Abrir Swagger
 
 ```
 http://127.0.0.1:8000/docs
@@ -151,6 +116,18 @@ http://127.0.0.1:8000/docs
 FastAPI genera automáticamente una interfaz visual donde puedes probar todos los endpoints.
 
 ---
+
+
+### 7. Crear Admin
+
+Primero dirigete a /docs y registra un usuario que será administrador, usando el endpoint de 'registrar'. Posteriormente ve al SQL Editor de Supabase y ejecuta:
+ 
+```sql
+UPDATE "Usuario" SET rol = 'admin' WHERE username = 'tu_usuario'; -- Aqui va el username de tu usuario administrador
+```
+ 
+Desde ese admin puedes promover a otros usuarios usando el endpoint `PATCH /usuario/{id}/rol`.
+
 
 ## 🔐 Sistema de autenticación — OAuth2 + JWT
  

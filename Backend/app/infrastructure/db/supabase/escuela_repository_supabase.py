@@ -2,22 +2,7 @@ from typing import Optional
 from app.domain.models.escuela import Escuela
 from app.domain.ports.escuela_repository import EscuelaRepository
 from app.infrastructure.db.supabase.client import engine
-from sqlalchemy import Table, Column, Integer,Numeric, Boolean,String, MetaData
-
-metadata=MetaData()
-
-tabla_escuela = Table(
-    "Escuela", metadata,
-    Column("id_escuela", Integer, primary_key=True),
-    Column("id_usuario", Integer),
-    Column("nombre", String),
-    Column("ubicacion", String),
-    Column("nivel_academico", String),
-    Column("telefono", String),
-    Column("estatus", Boolean,default=True)
-)
-
-#metadata.create_all(engine)
+from app.infrastructure.db.supabase.tables import tabla_escuela
 
 class SupabaseEscuelaRepository(EscuelaRepository):
     def agregar(self, escuela:Escuela) -> dict:
