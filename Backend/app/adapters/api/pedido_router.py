@@ -14,7 +14,8 @@ repo_escuela=SupabaseEscuelaRepository()
 repo_repartidor=SupabaseRepartidorRepository()
 service=PedidoService(repo,repo_bebida,repo_escuela,repo_repartidor)
 
-@router.post("/pedido")
+@router.post("/pedido",summary="Crear un pedido.",
+    description="Registra un nuevo pedido en el sistema calculando los datos con los repositorios correspondientes.",)
 def create_pedido(body:PedidoCreate,user=Depends(get_current_user)):
     return service.agregar_pedido(
             id_bebida=body.id_bebida,
@@ -25,10 +26,12 @@ def create_pedido(body:PedidoCreate,user=Depends(get_current_user)):
             cantidad=body.cantidad
         )
 
-@router.get("/pedido/{id_pedido}")
+@router.get("/pedido/{id_pedido}",summary="Obtener un pedido.",
+    description="Recupera la información detallada de un pedido específico por su ID.",)
 def ver_pedido(id_pedido:int,user=Depends(get_current_user)):
     return service.ver_pedido(id_pedido=id_pedido)
 
-@router.get("/pedido")
+@router.get("/pedido",summary="Listar pedidos.",
+    description="Obtiene el listado completo de los pedidos registrados.",)
 def ver_pedidos(user=Depends(get_current_user)):
     return service.ver_pedidos()

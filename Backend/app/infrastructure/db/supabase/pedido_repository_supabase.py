@@ -2,7 +2,6 @@ from typing import Optional
 from app.domain.models.pedido import Pedido
 from app.domain.ports.pedido_repository import PedidoRepository
 from app.infrastructure.db.supabase.client import engine
-from sqlalchemy import Table, Column, Integer,Numeric, Boolean,String, DateTime,MetaData,ForeignKey
 from app.infrastructure.db.supabase.tables import tabla_pedido
 
 

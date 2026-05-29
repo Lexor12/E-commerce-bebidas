@@ -1,8 +1,8 @@
 # 🥤 E-commerce Bebidas
 
 API REST para gestión de pedidos de bebidas hacia escuelas, construida con **FastAPI** y **Python** siguiendo una **arquitectura hexagonal**. La base de datos vive en **Supabase (PostgreSQL)** y toda la lógica de acceso a datos se maneja a través de sentencias SQL usando SQLAlchemy.
-
-El sistema incluye un **sistema completo de autenticación y autorización** basado en **OAuth2 + JWT + Refresh Tokens**, con control de acceso por roles.
+ 
+El sistema incluye un **sistema completo de autenticación y autorización** basado en **OAuth2 + JWT + Refresh Tokens**, con control de acceso por roles, y un **sistema de chat en tiempo real** con WebSockets e inteligencia artificial integrada mediante Groq.
 
 ---
 
@@ -21,6 +21,7 @@ El sistema incluye un **sistema completo de autenticación y autorización** bas
 | python-jose | Generación y verificación de JSON Web Tokens (JWT) |
 | bcrypt | Hashing seguro de contraseñas con sal aleatoria — resistente a ataques de diccionario y rainbow tables |
 | python-multipart | Soporte para form data — requerido por OAuth2PasswordRequestForm |
+| groq | Cliente oficial de Groq — permite usar modelos LLM como Llama 3 de forma gratuita para el chat de soporte |
   
 ---
 
@@ -28,6 +29,7 @@ El sistema incluye un **sistema completo de autenticación y autorización** bas
 
 - Python 3.11 o superior → [python.org](https://www.python.org/downloads/)
 - Una cuenta en [Supabase](https://supabase.com) con un proyecto creado
+- Una cuenta en [Groq](https://console.groq.com) para la IA del chat (gratuita)
 - Git
 
 ---
@@ -40,7 +42,28 @@ En supabase, debes crear una nueva base de datos, asegurate de designar un nombr
 
 > Asegurate de guardar esa contraseña en un lugar seguro ya que se usará más tarde.
 
-### 2. Obtener la cadena de conexión
+### 2. Crear las tablas
+ 
+Las tablas se crean automáticamente al arrancar el servidor gracias a `tables.py` con `metadata.create_all(engine)`. Las tablas que se crean son:
+ 
+| Tabla | Descripción |
+|---|---|
+| `Bebida` | Catálogo de bebidas disponibles |
+| `Escuela` | Escuelas registradas — cada una asociada a un usuario cliente |
+| `Repartidor` | Repartidores activos del sistema |
+| `Pedido` | Registro inmutable de pedidos realizados |
+| `Usuario` | Usuarios del sistema con rol (`cliente` o `admin`) |
+| `RefreshToken` | Tokens de refresco por usuario — permiten renovar sesiones sin re-autenticarse |
+| `Mensaje` | Historial de mensajes del chat — guarda mensajes del cliente y del bot |
+ 
+> Los pedidos son **inmutables** — una vez creados no se editan ni eliminan.
+ 
+> La tabla `Escuela` tiene un campo `id_usuario` que la asocia a un `Usuario`. Al hacer un pedido, el sistema identifica automáticamente la escuela del usuario logueado desde el token.
+ 
+> La tabla `Mensaje` guarda todos los mensajes con `id_usuario`, `contenido`, `de` (`cliente` o `bot`) y `timestamp` — permitiendo cargar el historial de conversaciones por usuario.
+
+
+### 3. Obtener la cadena de conexión
 
 En Supabase Dashboard → **Connect** → **Direct** → **Transaction pooler**, copia la URL y reemplaza la contraseña con la contraseña antes generada en el paso anterior:
 
@@ -53,6 +76,26 @@ postgresql://postgres.xxxxxx:PASSWORD@db.xxxxxx.pooler.supabase.co:5432/postgres
 debes guardarla en un archivo .env, dentro de app posteriormente, por lo que es crucial no perder la sentencia de conexión.
 
 ---
+
+## 🤖 Configuración de IA con Groq
+ 
+### 1. Crear cuenta y obtener API Key
+ 
+1. Ve a [console.groq.com](https://console.groq.com)
+2. Crea una cuenta gratuita — no requiere tarjeta de crédito
+3. Ve a **API Keys** → **Create API Key**
+4. Dale un nombre (ej. `ecommerce-bebidas`) y click **Submit**
+5. **Copia la key inmediatamente** — solo se muestra una vez
+### 2. Agregar la key al `.env`
+ 
+```env
+GROQ_API_KEY=gsk_tu_key_aqui
+```
+ 
+> El modelo usado es `llama-3.1-8b-instant` — gratuito, rápido y suficiente para soporte.
+ 
+---
+
 
 ## 🚀 Instalación y ejecución
 
@@ -117,8 +160,7 @@ FastAPI genera automáticamente una interfaz visual donde puedes probar todos lo
 
 ---
 
-
-### 7. Crear Admin
+### 7. Crear el primer admin
 
 Primero dirigete a /docs y registra un usuario que será administrador, usando el endpoint de 'registrar'. Posteriormente ve al SQL Editor de Supabase y ejecuta:
  
@@ -148,8 +190,8 @@ El sistema implementa **OAuth2 Password Flow** con **JWT** y **Refresh Tokens**,
  
 | Rol | Acceso |
 |---|---|
-| `cliente` | Registrar escuela, hacer pedidos, ver catálogo |
-| `admin` | Todo lo anterior + gestionar bebidas, repartidores, escuelas y roles |
+| `cliente` | Registrar escuela, hacer pedidos, ver catálogo, usar el chat |
+| `admin` | Todo lo anterior + gestionar bebidas, repartidores, escuelas, roles y conversaciones del chat |
  
 ### ¿Por qué dos tokens?
  
@@ -174,6 +216,11 @@ Al hacer login, bcrypt extrae la sal del hash guardado y la aplica al password i
  
 ---
 
+## 💬 Sistema de Chat en Tiempo Real — WebSockets + IA
+ 
+El sistema implementa un chat cliente-asistente usando **WebSockets** dentro de la arquitectura hexagonal, con respuestas automáticas por FAQ y un motor de IA integrado mediante **Groq**.
+
+
 ## 📡 Endpoints disponibles
 
 ### 🔓 Auth (públicos y protegidos)
@@ -188,8 +235,8 @@ Al hacer login, bcrypt extrae la sal del hash guardado y la aplica al password i
 ### 🥤 Bebidas
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| `GET` | `/bebida` | 🔒 Logueado | Ver todas las bebidas |
-| `GET` | `/bebida/{id}` | 🔒 Logueado | Ver bebida por ID |
+| `GET` | `/bebida` | Público | Ver todas las bebidas |
+| `GET` | `/bebida/{id}` | Público | Ver bebida por ID |
 | `POST` | `/bebida` | 🔒 Admin | Agregar bebida |
 | `PATCH` | `/bebida/{id}` | 🔒 Admin | Editar bebida |
 | `DELETE` | `/bebida/{id}` | 🔒 Admin | Desactivar bebida |
@@ -234,34 +281,44 @@ Al hacer login, bcrypt extrae la sal del hash guardado y la aplica al password i
 ```
 app/
 ├── domain/
-│   ├── models/          → Entidades puras (Bebida, Escuela, Repartidor, Pedido, User, RefreshToken)
+│   ├── models/          → Entidades puras (Bebida, Escuela, Repartidor, Pedido,
+│   │                      User, RefreshToken, Mensaje)
 │   │                      Sin dependencias externas — solo Python puro
-│   └── ports/           → Contratos abstractos (ABC) que definen qué se puede hacer
-│                          sin saber cómo se implementa
+│   ├── ports/           → Contratos abstractos (ABC) que definen qué se puede hacer
+│   │                      sin saber cómo se implementa
+│   └── prompts/
+│       └── assistant_prompt.py  → Prompt del asistente — pertenece al dominio
+│                                   porque define el comportamiento del negocio,
+│                                   no un detalle de infraestructura
 │
 ├── application/
 │   └── services/        → Lógica de negocio y casos de uso
-│                          No sabe nada de Supabase, JWT ni FastAPI
+│                          No sabe nada de Supabase, JWT, Groq ni FastAPI
 │                          Solo trabaja con los contratos (ports)
 │
 ├── infrastructure/
 │   ├── auth/
-│   │   └── jwt_service.py        → Implementación concreta de JWT (python-jose)
+│   │   └── jwt_service.py             → Implementación concreta de JWT (python-jose)
+│   ├── faq/
+│   │   ├── faq_repository.py          → Motor de FAQ por keywords con scoring
+│   │   └── groq_repository.py         → Motor de IA con Llama 3 vía Groq (activo)
 │   └── db/supabase/
-│       ├── client.py             → Conexión SQLAlchemy a Supabase
-│       └── *_supabase.py         → Implementaciones concretas de los repositorios
+│       ├── client.py                  → Conexión SQLAlchemy a Supabase
+│       ├── tables.py                  → Definición centralizada de todas las tablas
+│       └── *_supabase.py              → Implementaciones concretas de los repositorios
 │
 ├── adapters/
 │   ├── api/
-│   │   ├── schemas.py            → Modelos Pydantic (validación request/response)
-│   │   └── *_router.py           → Endpoints FastAPI — solo reciben y delegan
+│   │   ├── schemas.py                 → Modelos Pydantic (validación request/response)
+│   │   └── *_router.py                → Endpoints FastAPI — solo reciben y delegan
 │   └── dependencies/
-│       ├── container.py          → Punto central de ensamblaje — inyección de dependencias
-│       └── auth_dependency.py    → get_current_user y require_rol — protección de rutas
-│
-└── main.py              → Registra todos los routers
+│       ├── container.py               → Punto central de ensamblaje — inyección de dependencias
+│       └── auth_dependency.py         → get_current_user, require_rol, verify_token_ws
+├── realtime/
+│   └── chat_socket.py             → WebSocket del chat — verifica JWT,
+│                                    gestiona conexiones y delega al ChatService
+└── main.py              → Registra todos los routers incluyendo el WebSocket
 ```
-
 
 ### Flujo de un request protegido
  

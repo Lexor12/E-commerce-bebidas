@@ -1,6 +1,9 @@
 from app.infrastructure.auth.jwt_service import JWTService
 from app.infrastructure.db.supabase.user_repository_supabase import SupabaseUserRepository
 from app.infrastructure.db.supabase.refresh_token_repository_supabase import SupabaseRefreshTokenRepository
+from app.infrastructure.faq.faq_repository import FAQMemoryRepository
+from app.infrastructure.db.supabase.mensaje_repository_supabase import SupabaseMensajeRepository
+from app.infrastructure.faq.groq_repository import GroqRepository
 
 def get_jwt_service():
     return JWTService()
@@ -10,6 +13,13 @@ def get_user_repo():
 
 def get_refresh_repo():  # ← NUEVO
     return SupabaseRefreshTokenRepository()
+
+def get_faq_service():          # ← NUEVO
+    #return FAQMemoryRepository()
+    return GroqRepository()
+
+def get_mensaje_repo():         # ← NUEVO
+    return SupabaseMensajeRepository()
 
 """ 
 Esto, solventa el problema de que por ejemplo, un archivo usa:

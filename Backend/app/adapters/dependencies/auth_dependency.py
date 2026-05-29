@@ -31,9 +31,22 @@ def get_current_user(
     except:
         raise HTTPException(status_code=401, detail="Token inválido o expirado")
     
-def     require_rol(rol: str):
+def require_rol(rol: str):
     def verificar(user=Depends(get_current_user)):
         if user["rol"] != rol:
             raise HTTPException(status_code=403, detail="No tienes permisos para esta acción")
         return user
     return verificar
+
+def verify_token_ws(token: str) -> dict | None:
+    from app.adapters.dependencies.container import get_jwt_service, get_user_repo, get_refresh_repo
+    service = AuthService(get_jwt_service(), get_user_repo(), get_refresh_repo())
+    try:
+        payload = service.verify(token)
+        return {
+            "id": payload["sub"],
+            "username": payload["username"],
+            "rol": payload["rol"]
+        }
+    except:
+        return None

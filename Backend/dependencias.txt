@@ -1,1 +1,1 @@
-pip install fastapi uvicorn sqlalchemy psycopg2-binary pydantic supabase python-dotenv python-jose bcrypt python-multipart
+pip install fastapi uvicorn sqlalchemy psycopg2-binary pydantic supabase python-dotenv python-jose bcrypt python-multipart groq

@@ -17,17 +17,6 @@ tabla_bebida = Table(
     Column("estatus", Boolean, default=True)
 )
 
-tabla_escuela = Table(
-    "Escuela", metadata,
-    Column("id_escuela", Integer, primary_key=True, autoincrement=True),
-    Column("id_usuario", Integer),
-    Column("nombre", String),
-    Column("ubicacion", String),
-    Column("nivel_academico", String),
-    Column("telefono", String),
-    Column("estatus", Boolean, default=True)
-)
-
 tabla_repartidor = Table(
     "Repartidor", metadata,
     Column("id_repartidor", Integer, primary_key=True, autoincrement=True),
@@ -50,7 +39,7 @@ tabla_refresh_token = Table(
     "RefreshToken", metadata,
     Column("id_token", Integer, primary_key=True, autoincrement=True),
     Column("token", String),
-    Column("id_usuario", Integer),
+    Column("id_usuario", Integer,ForeignKey("Usuario.id_usuario")),
     Column("expira", DateTime),
     Column("activo", Boolean, default=True)
 )
@@ -67,6 +56,24 @@ tabla_pedido = Table(
     Column("precio_unitario", Numeric),
     Column("metodo_pago", String),
     Column("cantidad", Integer)
+)
+tabla_escuela = Table(
+    "Escuela", metadata,
+    Column("id_escuela", Integer, primary_key=True, autoincrement=True),
+    Column("id_usuario", Integer,ForeignKey("Usuario.id_usuario")),
+    Column("nombre", String),
+    Column("ubicacion", String),
+    Column("nivel_academico", String),
+    Column("telefono", String),
+    Column("estatus", Boolean, default=True)
+)
+tabla_mensaje = Table(
+    "Mensaje", metadata,
+    Column("id_mensaje", Integer, primary_key=True, autoincrement=True),
+    Column("id_usuario", Integer, ForeignKey("Usuario.id_usuario")),  # ← siempre requerido
+    Column("contenido", String),
+    Column("de", String),
+    Column("timestamp", DateTime)
 )
 
 metadata.create_all(engine)
