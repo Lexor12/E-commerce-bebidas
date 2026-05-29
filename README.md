@@ -86,11 +86,10 @@ debes guardarla en un archivo .env, dentro de app posteriormente, por lo que es 
 3. Ve a **API Keys** → **Create API Key**
 4. Dale un nombre (ej. `ecommerce-bebidas`) y click **Submit**
 5. **Copia la key inmediatamente** — solo se muestra una vez
-### 2. Agregar la key al `.env`
- 
-```env
-GROQ_API_KEY=gsk_tu_key_aqui
-```
+
+### 2. Guardar la key
+
+Debes guardar la clave que te arroja groq, ya que esta será colocada en el .env que se creará después
  
 > El modelo usado es `llama-3.1-8b-instant` — gratuito, rápido y suficiente para soporte.
  
@@ -136,6 +135,7 @@ DATABASE_URL=postgresql://postgres.xxxxxx:PASSWORD@db.xxxxxx.pooler.supabase.co:
 SECRET_KEY=tu_clave_secreta_para_tokens
 ALGORITHM="HS256"
 EXPIRE_MINUTES=60
+GROQ_API_KEY=gsk_tu_key_aqui
 ```
 
 debes designar una clave para los tokens
@@ -272,6 +272,13 @@ El sistema implementa un chat cliente-asistente usando **WebSockets** dentro de 
 🔒 Logueado significa que es minimo un "cliente", es decir que un Admin puede tambien usarlo
 
 > Los pedidos son **inmutables** — una vez creados no se editan ni eliminan. Son registros históricos. El `total` y `precio_unitario` se calculan automáticamente en la BD.
+
+### 💬 Chat
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| `WS` | `/ws/chat?token=JWT` | 🔒 Logueado | Conectar al chat en tiempo real |
+ 
+> 🔒 Logueado significa mínimo rol `cliente` — un admin también puede usarlo.
 
 ---
 
